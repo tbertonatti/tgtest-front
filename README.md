@@ -1,4 +1,10 @@
-# front
+# Todos Gamers Test - VueJS Frontend
+[Backend](https://github.com/tbertonatti/tgtest-back)
+## Requirements
+
+* Git
+* Node
+
 
 ## Project setup
 ```
