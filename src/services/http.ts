@@ -12,6 +12,8 @@ const HandledFetch = async (url: string, data = {}) => {
     } catch (err: any) {
         if (err.toString().includes("Error: 502")) {
             throw Error("Server is down");
+        } else {
+            throw err;
         }
     }
 };

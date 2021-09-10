@@ -1,54 +1,135 @@
 <template>
-  <div v-if="!editing && id !== 'new'">
-    <span>ID: {{ id }}</span>
-    <span>Name: {{ name }}</span>
-    <span>Lastname: {{ lastName }}</span>
-    <span>Email: {{ email }}</span>
-    <span>Phone: {{ phone }}</span>
-    <button :disabled="saving" v-if="!editing" v-on:click="edit">edit</button>
-    <button :disabled="saving" v-if="!editing" v-on:click="deleteP">
-      delete
-    </button>
-  </div>
-  <div v-if="editing || id === 'new'">
-    <div>
-      <label>Name:</label>
-      <input :disabled="saving" v-model="personObj.name" />
+  <div class="row">
+    <div class="col-sm-11 row">
+      <div class="mb-3 row col-lg-3 col-sm-6">
+        <label :for="`name-${id}`" class="col-sm-5 col-form-label">Name:</label>
+        <div class="col-sm-7">
+          <input
+            :id="`name-${id}`"
+            class="form-control"
+            placeholder="Name"
+            :disabled="saving || (!editing && id !== 'new')"
+            v-model="personObj.name"
+          />
+        </div>
+      </div>
+      <div class="mb-3 row col-lg-3 col-sm-6">
+        <label :for="`lastname-${id}`" class="col-sm-5 col-form-label"
+          >Lastname:</label
+        >
+        <div class="col-sm-7">
+          <input
+            placeholder="Lastname"
+            :id="`lastname-${id}`"
+            class="form-control"
+            :disabled="saving || (!editing && id !== 'new')"
+            v-model="personObj.lastName"
+          />
+        </div>
+      </div>
+      <div class="mb-3 row col-lg-3 col-sm-6">
+        <label :for="`email-${id}`" class="col-sm-5 col-form-label"
+          >Email:</label
+        >
+        <div class="col-sm-7">
+          <input
+            placeholder="Email"
+            :id="`email-${id}`"
+            class="form-control"
+            type="email"
+            :disabled="saving || (!editing && id !== 'new')"
+            v-model="personObj.email"
+          />
+        </div>
+      </div>
+      <div class="mb-3 row col-lg-3 col-sm-6">
+        <label :for="`phone-${id}`" class="col-sm-5 col-form-label"
+          >Phone:</label
+        >
+        <div class="col-sm-7">
+          <input
+            placeholder="Phone"
+            :id="`phone-${id}`"
+            class="form-control"
+            :disabled="saving || (!editing && id !== 'new')"
+            type="number"
+            v-model="personObj.phone"
+          />
+        </div>
+      </div>
     </div>
-    <div>
-      <label>Lastname:</label>
-      <input :disabled="saving" v-model="personObj.lastName" />
+    <div class="col-sm-1">
+      <button
+        title="Edit"
+        class="btn btn-sm btn-primary"
+        type="button"
+        :disabled="saving"
+        v-if="!editing && id !== 'new'"
+        v-on:click="edit"
+      >
+        ✎
+      </button>
+      <button
+        title="Delete"
+        class="btn btn-sm btn-danger"
+        type="button"
+        :disabled="saving"
+        v-if="!editing && id !== 'new'"
+        v-on:click="deleteP"
+      >
+        ⌫
+      </button>
+      <button
+        title="Create"
+        class="btn btn-sm btn-success"
+        type="button"
+        :disabled="saving"
+        v-if="id === 'new'"
+        v-on:click="create"
+      >
+        +
+      </button>
+      <button
+        title="Update"
+        class="btn btn-sm btn-success"
+        type="button"
+        :disabled="saving"
+        v-if="id !== 'new' && editing"
+        v-on:click="update"
+      >
+        ✓
+      </button>
+      <button
+        title="Cancel"
+        class="btn btn-sm btn-danger"
+        type="button"
+        v-if="id !== 'new' && editing"
+        :disabled="saving"
+        v-on:click="edit"
+      >
+        ✕
+      </button>
     </div>
-    <div>
-      <label>Email:</label>
-      <input :disabled="saving" v-model="personObj.email" />
-    </div>
-    <div>
-      <label>Phone:</label>
-      <input :disabled="saving" type="number" v-model="personObj.phone" />
-    </div>
-    <button v-if="id !== 'new'" :disabled="saving" v-on:click="edit">
-      Cancel
-    </button>
-    <button :disabled="saving" v-if="id === 'new'" v-on:click="create">
-      create
-    </button>
-    <button :disabled="saving" v-if="id !== 'new'" v-on:click="update">
-      update
-    </button>
   </div>
 </template>
 
 <script lang="ts">
+/* eslint-disable */
 import Person from "@/models/person";
 import { CreatePerson, DeletePerson, UpdatePerson } from "@/services/people";
 import { defineComponent } from "vue";
 
-const parseForm = (formObj: Person) => JSON.parse(JSON.stringify(formObj));
+// TODO: Add form validators
+const parseForm = (formObj: Person): Person => {
+  const finalPerson: Person = JSON.parse(JSON.stringify(formObj));
+  finalPerson.phone =
+    typeof finalPerson.phone === "number" ? finalPerson.phone : 0;
+  return finalPerson;
+};
 
 export default defineComponent({
   name: "PersonItemList",
-  emits: ["updatePerson", "deletePerson"],
+  emits: ["updatePerson", "deletePerson", "errorMessage"],
   props: {
     id: String,
     name: String,
@@ -72,49 +153,54 @@ export default defineComponent({
     edit() {
       this.editing = !this.editing;
     },
-    deleteP() {
+    async deleteP() {
       this.saving = true;
-      DeletePerson(String(this.id))
-        .then(() => {
-          this.$emit("deletePerson", this.id);
-          this.saving = false;
-        })
-        .catch(() => {
-          this.saving = false;
-        });
+      try {
+        await DeletePerson(String(this.id));
+        this.$emit("deletePerson", this.id);
+        this.saving = false;
+      } catch (error) {
+        this.$emit("errorMessage", "Failed to delete person");
+        this.saving = false;
+        console.log(error);
+      }
     },
-    update() {
+    async update() {
       this.saving = true;
-      UpdatePerson(String(this.id), parseForm(this.personObj))
-        .then(() => {
-          this.$emit("updatePerson", {
-            id: this.id,
-            ...parseForm(this.personObj),
-          });
-          this.saving = false;
-          this.editing = !this.editing;
-        })
-        .catch(() => {
-          this.saving = false;
+      try {
+        const formData = parseForm(this.personObj);
+        await UpdatePerson(String(this.id), formData);
+        this.$emit("updatePerson", {
+          id: this.id,
+          ...formData,
         });
+        this.saving = false;
+        this.editing = !this.editing;
+      } catch (error) {
+        this.$emit("errorMessage", "Failed to update person");
+        this.saving = false;
+        console.log(error);
+      }
     },
-    create() {
+    async create() {
       this.saving = true;
-      CreatePerson(parseForm(this.personObj))
-        .then(() => {
-          this.$emit("updatePerson", {
-            id: "new",
-            ...parseForm(this.personObj),
-          });
-          this.saving = false;
-          this.personObj.name = "";
-          this.personObj.lastName = "";
-          this.personObj.email = "";
-          this.personObj.phone = 0;
-        })
-        .catch(() => {
-          this.saving = false;
+      try {
+        const formData = parseForm(this.personObj);
+        await CreatePerson(formData);
+        this.$emit("updatePerson", {
+          id: "new",
+          ...formData,
         });
+        this.saving = false;
+        this.personObj.name = "";
+        this.personObj.lastName = "";
+        this.personObj.email = "";
+        this.personObj.phone = 0;
+      } catch (error) {
+        this.$emit("errorMessage", "Failed to create person");
+        this.saving = false;
+        console.log(error.message);
+      }
     },
   },
 });
